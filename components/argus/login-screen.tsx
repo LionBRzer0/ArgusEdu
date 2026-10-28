@@ -9,7 +9,6 @@ import { createClient } from "@/utils/supabase/client"
 
 export type LoginRole = "professor" | "student"
 
-/** Guarda o perfil escolhido, porque o login com Google recarrega a página. */
 export const ROLE_STORAGE_KEY = "argus:role"
 
 const roles: { id: LoginRole; label: string; hint: string; icon: typeof Presentation }[] = [
@@ -30,12 +29,25 @@ export function LoginScreen() {
   async function handleGoogleSignIn() {
     setIsSigningIn(true)
     localStorage.setItem(ROLE_STORAGE_KEY, role)
+    
     const supabase = createClient()
+    
+    // Define explicitamente o redirecionamento para a rota /auth/callback
+    const redirectUrl = typeof window !== "undefined" 
+      ? `${window.location.origin}/auth/callback` 
+      : ""
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin }, // volta ao endereço onde a app está aberta
+      options: { 
+        redirectTo: redirectUrl 
+      },
     })
-    if (error) setIsSigningIn(false)
+
+    if (error) {
+      console.error("Erro no login Supabase:", error.message)
+      setIsSigningIn(false)
+    }
   }
 
   return (
