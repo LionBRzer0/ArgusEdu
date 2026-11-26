@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Users } from "lucide-react"
 import { toast } from "sonner"
 import { ClassroomGrid } from "@/components/argus/classroom-grid"
@@ -17,7 +17,6 @@ import {
   fetchTurma,
   rowToStudent,
   saveEndSession,
-  saveExamMode,
   saveLockAll,
   updateStudent,
   type AlunoRow,
@@ -58,6 +57,11 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
   const [students, setStudents] = useState<Student[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const studentsRef = useRef<Student[]>([])
+  useEffect(() => {
+    studentsRef.current = students
+  })
 
   const loadedId = turma?.id ?? null
   const selected = students.find((s) => s.id === selectedId) ?? null
@@ -110,6 +114,15 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
             return
           }
           const incoming = rowToStudent(payload.new as AlunoRow)
+          // Aluno saiu da janela do ArgusEdu: avisa o professor (o cartão também fica vermelho)
+          const previous = studentsRef.current.find((s) => s.id === incoming.id)
+          if (incoming.status === "alert" && previous && previous.status !== "alert") {
+            const time = new Date().toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" })
+            toast.warning(`${incoming.name} (${incoming.desk}) saiu da janela do ArgusEdu`, {
+              description: `${incoming.alertReason ?? "Fora da janela"} · ${time}`,
+              duration: 10000,
+            })
+          }
           setStudents((prev) =>
             prev.some((s) => s.id === incoming.id)
               ? prev.map((s) => (s.id === incoming.id ? incoming : s))
@@ -194,30 +207,6 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
     )
   }
 
-  function toggleBrowsers(id: string, value: boolean) {
-    update(id, (s) => ({
-      browsersBlocked: value,
-      ...(value && {
-        processes: s.processes.filter((p) => !p.name.startsWith("chrome")),
-        ...(s.status === "alert" && { status: "online" as const, alertReason: undefined, activeWindow: "Área de trabalho" }),
-      }),
-    }))
-    toast(value ? `Navegadores bloqueados para ${nameOf(id)}` : `Navegadores liberados para ${nameOf(id)}`)
-  }
-
-  function killProcess(id: string, pid: number) {
-    const proc = students.find((s) => s.id === id)?.processes.find((p) => p.pid === pid)
-    update(id, (s) => {
-      const processes = s.processes.filter((p) => p.pid !== pid)
-      const stillFlagged = processes.some((p) => p.flagged)
-      return {
-        processes,
-        ...(s.status === "alert" && !stillFlagged && { status: "online" as const, alertReason: undefined, activeWindow: "Área de trabalho" }),
-      }
-    })
-    toast.success(`Processo ${proc?.name ?? pid} encerrado`)
-  }
-
   async function removeStudent(id: string) {
     const name = nameOf(id)
     setDrawerOpen(false)
@@ -237,24 +226,12 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
     toast(locked ? "Todas as telas bloqueadas" : "Todas as telas desbloqueadas")
   }
 
-  function handleExamMode(value: boolean) {
-    if (!turma) return
-    setTurma({ ...turma, examMode: value })
-    if (value) {
-      setStudents((prev) => prev.map((s) => (s.status === "offline" ? s : { ...s, browsersBlocked: true })))
-      toast.success("Modo Prova ativado", { description: "Navegadores bloqueados em todas as estações." })
-    } else {
-      toast("Modo Prova desativado")
-    }
-    void save(saveExamMode(supabase, turma.id, value), "Não foi possível guardar o Modo Prova")
-  }
-
   /** Encerra a sessão: os alunos param de partilhar e saem da sala (a turma fica guardada para reabrir). */
   function endSession() {
     if (!turma) return
     const id = turma.id
     const endedAt = new Date().toISOString()
-    setTurma({ ...turma, active: false, examMode: false, endedAt })
+    setTurma({ ...turma, active: false, endedAt })
     setDrawerOpen(false)
     setStudents((prev) =>
       prev.map((s) => ({
@@ -317,8 +294,6 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
           sessionActive={turma.active}
           startedAt={turma.startedAt}
           endedAt={turma.endedAt}
-          examMode={turma.examMode}
-          onExamModeChange={handleExamMode}
           onEndSession={endSession}
           onDelete={deleteThisTurma}
           onBack={onBack}
@@ -337,9 +312,7 @@ export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardPro
           student={selected}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
-          onToggleBrowsers={toggleBrowsers}
           onToggleLock={toggleLock}
-          onKillProcess={killProcess}
           onSendMessage={sendMessage}
           onSendLink={sendLink}
           onRemove={removeStudent}

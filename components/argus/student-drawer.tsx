@@ -1,14 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { AlertTriangle, Cpu, ExternalLink, Globe, Lock, LockOpen, Maximize2, Send, UserMinus, X } from "lucide-react"
+import { AlertTriangle, ExternalLink, Lock, LockOpen, Maximize2, Send, UserMinus, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { StatusDot } from "@/components/argus/desk-card"
 import { TeacherScreenViewer } from "@/components/argus/TeacherScreenViewer"
 import type { Student } from "@/lib/classroom-data"
@@ -19,9 +18,7 @@ type StudentDrawerProps = {
   student: Student | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  onToggleBrowsers: (id: string, value: boolean) => void
   onToggleLock: (id: string) => void
-  onKillProcess: (id: string, pid: number) => void
   onSendMessage: (id: string, message: string) => void
   /** Devolve true se o link foi enviado. */
   onSendLink: (id: string, url: string) => Promise<boolean>
@@ -39,9 +36,7 @@ export function StudentDrawer({
   student,
   open,
   onOpenChange,
-  onToggleBrowsers,
   onToggleLock,
-  onKillProcess,
   onSendMessage,
   onSendLink,
   onRemove,
@@ -112,68 +107,15 @@ export function StudentDrawer({
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex cursor-pointer items-center justify-between gap-2 rounded-lg border bg-card p-3">
-                    <span className="flex items-center gap-2 text-sm">
-                      <Globe className="size-4 text-muted-foreground" aria-hidden="true" />
-                      Bloquear Navegadores
-                    </span>
-                    <Switch
-                      checked={student.browsersBlocked}
-                      onCheckedChange={(v) => onToggleBrowsers(student.id, v)}
-                      aria-label="Bloquear navegadores"
-                    />
-                  </label>
-                  <Button
-                    variant={student.locked ? "secondary" : "outline"}
-                    className="h-auto justify-start gap-2 p-3"
-                    onClick={() => onToggleLock(student.id)}
-                    aria-pressed={student.locked}
-                  >
-                    {student.locked ? <LockOpen /> : <Lock />}
-                    {student.locked ? "Desbloquear tela" : "Bloquear tela"}
-                  </Button>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    <SectionLabel>Processos em execução</SectionLabel>
-                    <span className="font-mono text-[11px] text-muted-foreground">{student.processes.length}</span>
-                  </div>
-                  <ScrollArea className="h-56 rounded-lg border bg-card">
-                    <ul className="divide-y">
-                      {student.processes.length === 0 && (
-                        <li className="p-4 text-center text-sm text-muted-foreground">Nenhum processo.</li>
-                      )}
-                      {student.processes.map((proc) => (
-                        <li key={proc.pid} className="flex items-center gap-3 px-3 py-2.5">
-                          <Cpu
-                            className={cn("size-4 shrink-0", proc.flagged ? "text-destructive" : "text-muted-foreground")}
-                            aria-hidden="true"
-                          />
-                          <div className="flex min-w-0 flex-1 flex-col">
-                            <span className={cn("truncate font-mono text-xs", proc.flagged && "text-destructive")}>
-                              {proc.name}
-                            </span>
-                            <span className="font-mono text-[10px] text-muted-foreground">
-                              PID {proc.pid} · {proc.cpu.toFixed(1)}% CPU · {proc.memoryMb} MB
-                            </span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => onKillProcess(student.id, proc.pid)}
-                            disabled={proc.name === "argus-agent.exe"}
-                            aria-label={`Encerrar processo ${proc.name}`}
-                          >
-                            Encerrar
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </ScrollArea>
-                </div>
+                <Button
+                  variant={student.locked ? "secondary" : "outline"}
+                  className="h-auto justify-start gap-2 p-3"
+                  onClick={() => onToggleLock(student.id)}
+                  aria-pressed={student.locked}
+                >
+                  {student.locked ? <LockOpen /> : <Lock />}
+                  {student.locked ? "Desbloquear ecrã do ArgusEdu" : "Bloquear ecrã do ArgusEdu"}
+                </Button>
 
                 <div className="flex flex-col gap-3">
                   <SectionLabel>Abrir link no navegador do aluno</SectionLabel>

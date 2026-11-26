@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import type { StudentSession } from "@/lib/classroom-data"
-import { setSharing } from "@/lib/classroom-db"
+import { setFocus, setSharing } from "@/lib/classroom-db"
 import { ALL_STUDENTS, COMMAND_EVENT, commandTopic, parseEnvelope, type Command } from "@/lib/commands"
 import { openBroadcastChannel } from "@/lib/realtime-channel"
 import { createClient } from "@/utils/supabase/client"
@@ -105,6 +105,48 @@ export function StudentWaiting({ session, user, onLogout, onEnded }: StudentWait
     }
   }, [supabase, session.turmaId, session.studentId])
 
+  // Avisa o professor quando o aluno sai da janela do ArgusEdu (outro separador, outra janela, minimizar).
+  // Espera 3 s antes de avisar, para não dar alerta por um clique rápido fora da janela.
+  useEffect(() => {
+    let away = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+
+    function report(focused: boolean) {
+      void setFocus(supabase, focused).catch((error) => console.warn("Não foi possível atualizar o foco", error))
+    }
+
+    function check() {
+      const focused = document.visibilityState === "visible" && document.hasFocus()
+      if (timer) {
+        clearTimeout(timer)
+        timer = null
+      }
+      if (focused) {
+        if (away) {
+          away = false
+          report(true)
+        }
+      } else if (!away) {
+        timer = setTimeout(() => {
+          away = true
+          report(false)
+        }, 3000)
+      }
+    }
+
+    report(true) // limpa um alerta antigo ao entrar na sala
+    check()
+    document.addEventListener("visibilitychange", check)
+    window.addEventListener("blur", check)
+    window.addEventListener("focus", check)
+    return () => {
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", check)
+      window.removeEventListener("blur", check)
+      window.removeEventListener("focus", check)
+    }
+  }, [supabase, session.studentId])
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
       <BrandMark />
@@ -125,7 +167,7 @@ export function StudentWaiting({ session, user, onLogout, onEnded }: StudentWait
               Ligado à sala {session.turmaName}
             </h1>
             <p className="text-pretty text-sm text-muted-foreground">
-              Partilhe o seu ecrã para o professor poder acompanhar o seu trabalho. Mantenha esta janela aberta.
+              Partilhe o seu ecrã para o professor poder acompanhar o seu trabalho. Mantenha esta janela aberta: o professor é avisado se sair dela.
             </p>
           </div>
           <Badge variant="outline" className="gap-1.5 border-primary/30 text-primary">

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Process, Restrictions, Student, StudentSession, StudentStatus, Turma, TurmaListItem } from "@/lib/classroom-data"
+import type { Process, Student, StudentSession, StudentStatus, Turma, TurmaListItem } from "@/lib/classroom-data"
 
 type Client = SupabaseClient
 
@@ -125,7 +125,6 @@ export async function fetchStudents(supabase: Client, turmaId: string): Promise<
 type NewTurma = {
   name: string
   code: string
-  restrictions: Restrictions
   roster: { name: string; email: string }[]
 }
 
@@ -140,10 +139,6 @@ export async function createTurma(supabase: Client, input: NewTurma): Promise<Tu
       .insert({
         nome: input.name,
         codigo: code,
-        bloquear_navegadores: input.restrictions.blockBrowsers,
-        desativar_internet: input.restrictions.disableInternet,
-        restringir_ia: input.restrictions.restrictAI,
-        modo_prova: input.restrictions.blockBrowsers,
       })
       .select(TURMA_COLUMNS)
       .single()
@@ -186,19 +181,6 @@ export async function updateStudent(supabase: Client, id: string, patch: Partial
 export async function deleteStudent(supabase: Client, id: string) {
   const { error } = await supabase.from("alunos").delete().eq("id", id)
   if (error) throw error
-}
-
-/** Liga/desliga o Modo Prova; ao ligar, bloqueia navegadores em todas as estações ligadas. */
-export async function saveExamMode(supabase: Client, turmaId: string, value: boolean) {
-  const { error } = await supabase.from("turmas").update({ modo_prova: value }).eq("id", turmaId)
-  if (error) throw error
-  if (!value) return
-  const { error: studentsError } = await supabase
-    .from("alunos")
-    .update({ navegadores_bloqueados: true })
-    .eq("turma_id", turmaId)
-    .neq("estado", "offline")
-  if (studentsError) throw studentsError
 }
 
 /** Encerra a sessão e desliga todas as estações. */
@@ -258,6 +240,12 @@ export async function leaveTurma(supabase: Client) {
 /** O aluno indica se está a partilhar o ecrã (aparece no cartão do professor). */
 export async function setSharing(supabase: Client, active: boolean) {
   const { error } = await supabase.rpc("definir_partilha", { p_ativa: active })
+  if (error) throw error
+}
+
+/** O aluno indica se a janela do ArgusEdu está em primeiro plano (o professor recebe um alerta se sair). */
+export async function setFocus(supabase: Client, focused: boolean) {
+  const { error } = await supabase.rpc("definir_foco", { p_focado: focused })
   if (error) throw error
 }
 
