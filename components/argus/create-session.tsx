@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
 import { QRCodeSVG } from "qrcode.react"
-import { Bot, Copy, Globe, Play, QrCode, RefreshCw, Trash2, UserPlus, Users, WifiOff } from "lucide-react"
+import { Bot, Copy, Globe, LogOut, Play, QrCode, RefreshCw, Trash2, UserPlus, Users, WifiOff } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SavedTurmas } from "@/components/argus/saved-turmas"
@@ -53,7 +53,7 @@ function StepHeading({ step, title, description }: { step: number; title: string
   )
 }
 
-export function CreateSession({ onStart }: { onStart: (turma: Turma) => void }) {
+export function CreateSession({ onStart, onLogout }: { onStart: (turma: Turma) => void; onLogout: () => void }) {
   const supabase = useMemo(() => createClient(), [])
   const [name, setName] = useState("")
   const [code, setCode] = useState(randomCode)
@@ -123,12 +123,18 @@ export function CreateSession({ onStart }: { onStart: (turma: Turma) => void }) 
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 p-4 lg:p-8">
-      <div className="mb-6 flex flex-col gap-1">
-        <span className="font-mono text-[11px] uppercase tracking-widest text-primary">Nova sessão</span>
-        <h1 className="text-2xl font-semibold tracking-tight">Criar Nova Prova / Sessão de Aula</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure a turma, a forma de entrada dos alunos e as restrições antes de iniciar.
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-primary">Nova sessão</span>
+          <h1 className="text-2xl font-semibold tracking-tight">Criar Nova Prova / Sessão de Aula</h1>
+          <p className="text-sm text-muted-foreground">
+            Configure a turma, a forma de entrada dos alunos e as restrições antes de iniciar.
+          </p>
+        </div>
+        <Button type="button" variant="ghost" size="sm" onClick={onLogout} className="shrink-0 gap-1.5">
+          <LogOut aria-hidden="true" />
+          Terminar sessão
+        </Button>
       </div>
 
       <SavedTurmas onOpen={onStart} />

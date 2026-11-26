@@ -5,8 +5,8 @@ import type { RealtimeChannel } from "@supabase/supabase-js"
 import { MonitorOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
-  DEFAULT_ICE_SERVERS,
   SIGNAL_EVENT,
+  getIceServers,
   newId,
   openSignalChannel,
   sendSignal,
@@ -21,7 +21,7 @@ type TeacherScreenViewerProps = {
   turmaId: string
   alunoId: string
   alunoNome?: string
-  /** Use para passar um servidor TURN se o STUN por omissão não chegar. */
+  /** Servidores ICE fixos. Por omissão vêm de /api/ice-servers (STUN + TURN configurado na Vercel). */
   iceServers?: RTCIceServer[]
   className?: string
 }
@@ -30,7 +30,7 @@ const messages: Record<Exclude<ViewerState, "live">, string> = {
   connecting: "A ligar…",
   waiting: "À espera que o aluno partilhe o ecrã.",
   ended: "O aluno parou a partilha.",
-  failed: "Não foi possível ligar ao ecrã do aluno.",
+  failed: "Não foi possível ligar ao ecrã do aluno. Se estiverem em redes diferentes, é preciso um servidor TURN.",
 }
 
 /**
@@ -41,7 +41,7 @@ export function TeacherScreenViewer({
   turmaId,
   alunoId,
   alunoNome,
-  iceServers = DEFAULT_ICE_SERVERS,
+  iceServers,
   className,
 }: TeacherScreenViewerProps) {
   const supabase = useMemo(() => createClient(), [])
@@ -55,6 +55,7 @@ export function TeacherScreenViewer({
   })
 
   useEffect(() => {
+    void getIceServers() // pede já as credenciais TURN para não atrasar a primeira ligação
     let cancelled = false
     let channel: RealtimeChannel | null = null
     let pc: RTCPeerConnection | null = null
@@ -80,7 +81,11 @@ export function TeacherScreenViewer({
 
     async function handleOffer(sdp: RTCSessionDescriptionInit) {
       closePeer()
-      const peer = new RTCPeerConnection({ iceServers: iceRef.current })
+      setState("connecting")
+      const ice = iceRef.current ?? (await getIceServers())
+      if (cancelled) return
+      pc?.close() // chegou outra offer enquanto esperávamos
+      const peer = new RTCPeerConnection({ iceServers: ice })
       pc = peer
       setState("connecting")
 
