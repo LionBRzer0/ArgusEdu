@@ -6,8 +6,8 @@ import { MonitorOff, MonitorUp } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  DEFAULT_ICE_SERVERS,
   SIGNAL_EVENT,
+  getIceServers,
   openSignalChannel,
   sendSignal,
   type Signal,
@@ -18,7 +18,7 @@ import { createClient } from "@/utils/supabase/client"
 type StudentScreenShareProps = {
   turmaId: string
   alunoId: string
-  /** Use para passar um servidor TURN se o STUN por omissão não chegar. */
+  /** Servidores ICE fixos. Por omissão vêm de /api/ice-servers (STUN + TURN configurado na Vercel). */
   iceServers?: RTCIceServer[]
   /** Chamado quando o aluno começa/pára de partilhar (por ex. para avisar o professor). */
   onSharingChange?: (sharing: boolean) => void
@@ -29,7 +29,7 @@ type StudentScreenShareProps = {
  * Ecrã do aluno: o botão "Partilhar Ecrã" pede o ecrã ao navegador (getDisplayMedia)
  * e envia-o por WebRTC a cada professor que o peça. A sinalização vai pelo Supabase Realtime.
  */
-export function StudentScreenShare({ turmaId, alunoId, iceServers = DEFAULT_ICE_SERVERS, onSharingChange, className }: StudentScreenShareProps) {
+export function StudentScreenShare({ turmaId, alunoId, iceServers, onSharingChange, className }: StudentScreenShareProps) {
   const supabase = useMemo(() => createClient(), [])
   const [connected, setConnected] = useState(false)
   const [sharing, setSharing] = useState(false)
@@ -85,7 +85,10 @@ export function StudentScreenShare({ turmaId, alunoId, iceServers = DEFAULT_ICE_
       if (!stream) return // ainda não estou a partilhar; o `sharing` avisará quando começar
 
       closePeer(viewerId)
-      const pc = new RTCPeerConnection({ iceServers: iceRef.current })
+      const ice = iceRef.current ?? (await getIceServers())
+      if (streamRef.current !== stream) return // parou de partilhar enquanto esperávamos
+      closePeer(viewerId) // outro pedido do mesmo professor pode ter chegado durante a espera
+      const pc = new RTCPeerConnection({ iceServers: ice })
       peersRef.current.set(viewerId, pc)
       stream.getTracks().forEach((track) => pc.addTrack(track, stream))
 
@@ -157,6 +160,7 @@ export function StudentScreenShare({ turmaId, alunoId, iceServers = DEFAULT_ICE_
 
   // Liga ao canal de sinalização enquanto o componente estiver no ecrã
   useEffect(() => {
+    void getIceServers() // pede já as credenciais TURN para não atrasar a primeira ligação
     let cancelled = false
     let channel: RealtimeChannel | null = null
 

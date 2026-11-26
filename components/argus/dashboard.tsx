@@ -44,11 +44,13 @@ type DashboardProps = {
   /** Sem id, abre a sessão ativa mais recente do professor. */
   turmaId: string | null
   onCreate: () => void
+  /** Volta à lista de turmas (sem encerrar a sessão). */
+  onBack: () => void
   /** A turma foi apagada: o painel já não tem nada para mostrar. */
   onDeleted: () => void
 }
 
-export function Dashboard({ turmaId, onCreate, onDeleted }: DashboardProps) {
+export function Dashboard({ turmaId, onCreate, onBack, onDeleted }: DashboardProps) {
   const supabase = useMemo(() => createClient(), [])
   const [phase, setPhase] = useState<Phase>("loading")
   const [attempt, setAttempt] = useState(0)
@@ -319,6 +321,7 @@ export function Dashboard({ turmaId, onCreate, onDeleted }: DashboardProps) {
           onExamModeChange={handleExamMode}
           onEndSession={endSession}
           onDelete={deleteThisTurma}
+          onBack={onBack}
         />
         <main className="mx-auto w-full max-w-[1600px] p-4 lg:p-6">
           <CommandBar

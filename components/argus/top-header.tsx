@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Clock, Copy, FileLock2, PowerOff, ShieldCheck, Trash2 } from "lucide-react"
+import { ArrowLeft, Clock, Copy, FileLock2, PowerOff, ShieldCheck, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmButton } from "@/components/argus/confirm-button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,6 +21,7 @@ type TopHeaderProps = {
   onExamModeChange: (value: boolean) => void
   onEndSession: () => void
   onDelete: () => void
+  onBack: () => void
 }
 
 function formatDuration(totalSeconds: number) {
@@ -97,10 +98,15 @@ export function TopHeader({
   onExamModeChange,
   onEndSession,
   onDelete,
+  onBack,
 }: TopHeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur-xl">
       <div className="flex h-16 items-center gap-4 px-4 lg:px-6">
+        <Button variant="ghost" size="sm" onClick={onBack} className="gap-1.5 px-2" aria-label="Voltar às minhas turmas">
+          <ArrowLeft aria-hidden="true" />
+          <span className="hidden md:inline">Turmas</span>
+        </Button>
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 text-primary">
             <ShieldCheck className="size-5" aria-hidden="true" />
