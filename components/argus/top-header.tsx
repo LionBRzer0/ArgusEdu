@@ -1,14 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Copy, FileLock2, PowerOff, ShieldCheck, Trash2 } from "lucide-react"
+import { ArrowLeft, Clock, Copy, PowerOff, ShieldCheck, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { ConfirmButton } from "@/components/argus/confirm-button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 
 type TopHeaderProps = {
@@ -17,8 +16,6 @@ type TopHeaderProps = {
   sessionActive: boolean
   startedAt: string
   endedAt: string | null
-  examMode: boolean
-  onExamModeChange: (value: boolean) => void
   onEndSession: () => void
   onDelete: () => void
   onBack: () => void
@@ -94,8 +91,6 @@ export function TopHeader({
   sessionActive,
   startedAt,
   endedAt,
-  examMode,
-  onExamModeChange,
   onEndSession,
   onDelete,
   onBack,
@@ -120,17 +115,6 @@ export function TopHeader({
         <div className="ml-auto flex items-center gap-3">
           <RoomCode code={roomCode} />
           <SessionTimer running={sessionActive} startedAt={startedAt} endedAt={endedAt} />
-
-          <label
-            className={cn(
-              "flex cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2 transition-colors",
-              examMode ? "border-primary/40 bg-primary/10" : "bg-card",
-            )}
-          >
-            <FileLock2 className={cn("size-4", examMode ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
-            <span className="hidden text-sm font-medium md:inline">Modo Prova</span>
-            <Switch checked={examMode} onCheckedChange={onExamModeChange} disabled={!sessionActive} aria-label="Modo Prova" />
-          </label>
 
           <Button variant="destructive" onClick={onEndSession} disabled={!sessionActive} className="h-9 gap-2 px-3">
             <PowerOff aria-hidden="true" />

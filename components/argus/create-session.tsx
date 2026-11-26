@@ -2,32 +2,25 @@
 
 import { useMemo, useState, type FormEvent, type KeyboardEvent } from "react"
 import { QRCodeSVG } from "qrcode.react"
-import { Bot, Copy, Globe, LogOut, Play, QrCode, RefreshCw, Trash2, UserPlus, Users, WifiOff } from "lucide-react"
+import { AppWindow, Copy, Lock, LogOut, MonitorUp, Play, QrCode, RefreshCw, Trash2, UserPlus, Users } from "lucide-react"
 import { toast } from "sonner"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { SavedTurmas } from "@/components/argus/saved-turmas"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { Restrictions, Turma } from "@/lib/classroom-data"
+import type { Turma } from "@/lib/classroom-data"
 import { createTurma, randomCode } from "@/lib/classroom-db"
-import { cn } from "@/lib/utils"
 import { createClient } from "@/utils/supabase/client"
 
 type RosterEntry = { name: string; email: string }
 
-const restrictionOptions: { key: keyof Restrictions; label: string; description: string; icon: typeof Globe }[] = [
-  { key: "blockBrowsers", label: "Bloquear Navegadores", description: "Chrome, Edge, Firefox e Opera", icon: Globe },
-  { key: "disableInternet", label: "Desativar Internet", description: "Corta o acesso externo à rede", icon: WifiOff },
-  {
-    key: "restrictAI",
-    label: "Restringir Ferramentas de IA",
-    description: "ChatGPT, Claude, Gemini, Copilot",
-    icon: Bot,
-  },
+/** O que o ArgusEdu faz de verdade durante a sessão (não bloqueia nada fora do navegador). */
+const supervisionItems: { label: string; description: string; icon: typeof Lock }[] = [
+  { label: "Partilha de ecrã", description: "Vê o ecrã inteiro de cada aluno em direto", icon: MonitorUp },
+  { label: "Aviso ao sair da janela", description: "Alerta quando o aluno sai do ArgusEdu", icon: AppWindow },
+  { label: "Bloqueio e mensagens", description: "Bloqueia o ecrã do ArgusEdu e envia avisos ou links", icon: Lock },
 ]
 
 function initialsOf(name: string) {
@@ -60,14 +53,8 @@ export function CreateSession({ onStart, onLogout }: { onStart: (turma: Turma) =
   const [saving, setSaving] = useState(false)
   const [roster, setRoster] = useState<RosterEntry[]>([])
   const [entry, setEntry] = useState("")
-  const [restrictions, setRestrictions] = useState<Restrictions>({
-    blockBrowsers: true,
-    disableInternet: false,
-    restrictAI: true,
-  })
 
   const joinUrl = `https://argusedu.app/entrar/${code}`
-  const activeCount = Object.values(restrictions).filter(Boolean).length
 
   function addStudent() {
     const value = entry.trim()
@@ -111,7 +98,7 @@ export function CreateSession({ onStart, onLogout }: { onStart: (turma: Turma) =
     if (!name.trim() || saving) return
     setSaving(true)
     try {
-      const turma = await createTurma(supabase, { name: name.trim(), code, restrictions, roster })
+      const turma = await createTurma(supabase, { name: name.trim(), code, roster })
       onStart(turma)
     } catch (error) {
       console.error(error)
@@ -269,37 +256,17 @@ export function CreateSession({ onStart, onLogout }: { onStart: (turma: Turma) =
 
         <aside className="flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start">
           <section className="flex flex-col gap-4 rounded-xl border bg-card p-5">
-            <div className="flex items-start justify-between gap-2">
-              <StepHeading step={3} title="Restrições" description="Aplicadas ao iniciar a sessão." />
-              <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
-                {activeCount}/3
-              </Badge>
-            </div>
+            <StepHeading step={3} title="Supervisão" description="Ativa automaticamente ao iniciar a sessão." />
             <ul className="flex flex-col gap-2">
-              {restrictionOptions.map(({ key, label, description, icon: Icon }) => {
-                const on = restrictions[key]
-                return (
-                  <li key={key}>
-                    <label
-                      className={cn(
-                        "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
-                        on ? "border-primary/40 bg-primary/10" : "bg-background/50 hover:bg-accent",
-                      )}
-                    >
-                      <Icon className={cn("size-4 shrink-0", on ? "text-primary" : "text-muted-foreground")} aria-hidden="true" />
-                      <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                        <span className="text-sm font-medium">{label}</span>
-                        <span className="text-xs text-muted-foreground">{description}</span>
-                      </span>
-                      <Switch
-                        checked={on}
-                        onCheckedChange={(v) => setRestrictions((prev) => ({ ...prev, [key]: v }))}
-                        aria-label={label}
-                      />
-                    </label>
-                  </li>
-                )
-              })}
+              {supervisionItems.map(({ label, description, icon: Icon }) => (
+                <li key={label} className="flex items-center gap-3 rounded-lg border bg-background/50 p-3">
+                  <Icon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+                  <span className="flex min-w-0 flex-1 flex-col leading-tight">
+                    <span className="text-sm font-medium">{label}</span>
+                    <span className="text-xs text-muted-foreground">{description}</span>
+                  </span>
+                </li>
+              ))}
             </ul>
           </section>
 
